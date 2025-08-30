@@ -1,0 +1,80 @@
+
+
+https://thedfirreport.com/2024/08/26/blacksuit-ransomware/
+## Case Summary
+- **Initial Access:** Execution of an unusually large Cobalt Strike beacon. Delivery method unknown.
+- **Command and Control:** Traffic initially routed via CloudFlare, then switched to Amazon AWS.
+- **Enumeration Activities:** Used Windows utilities, AS-REP Roasting, Kerberoasting, and Sharphound.
+- **Lateral Movement:** Transferred Cobalt Strike beacon via SMB, additional beacons on workstations and servers, and used LSASS for credential dumping.
+- **Persistence:** SystemBC deployed with registry run key for persistence.
+- **Ransomware Deployment:** BlackSuit ransomware (qwe.exe) sent via SMB, executed using RDP.
+
+# ~={cyan}Attack Chain=~
+
+# Initial Access
+- Execution of Cobalt Strike beacon (RtWin64.exe).
+- **Observation:** Initial access point for deployment of the beacon is unknown.
+
+# Execution
+- **Cobalt Strike PsExec:**
+  - Used for remote process execution using psexec module and psexec_psh for PowerShell execution.
+- Commands:
+  - `rundll32.exe process spawned` by psexec.
+
+# Persistence
+- **Registry Run Key:**
+  - Created key "socks5" for launching SystemBC backdoor (socks32.exe) through PowerShell.
+  - Observed changes via Sysmon eventID 13.
+
+# Privilege Escalation
+- **Named Pipes:**
+  - Usage suggests pass-the-hash command execution for privilege escalation.
+
+# Defense Evasion
+- **Modify Registry:**
+  - PowerShell command to enable RDP access by setting `DenyTSConnections` to `0`.
+- **Process Injection:**
+  - Cobalt Strike beacons used process injection for evasion.
+
+# Credential Access
+- **AS-REP and Kerberoasting:**
+  - Conducted using Rubeus loaded into mstsc.exe, targeting domain controllers.
+- **LSASS Memory Access:**
+  - Accessed using Cobalt Strike injected process. 
+
+# Discovery
+- **Windows Utilities:**
+  - Commands like `systeminfo`, `nltest`, `net group`.
+- **Sharphound:**
+  - Loaded into memory for domain and local discovery.  Sysmon eventID 11 caught the files created by Sharphound. `users.json` `gpos.json` `containers.json`
+- **ADFind:**
+  - Used for Active Directory enumeration, executed multiple times with varied success.
+
+# Lateral Movement
+- **Pass-the-Hash:**
+  - Evidence found in Windows Security logs (eventID 4624). Logon type : 9 
+- **Cobalt Strike SMB Beacons and RDP:**
+  - Used for moving laterally across workstations and servers.
+- **Hidden SMB Shares:**
+  - C$ share used to distribute ransomware executable.
+
+# Collection
+- **Archiving Data:**
+  - Used `7z` to archive data output from discovery scripts.
+- **Searching for Valuable Files:**
+  - Opened files with sensitive information using Notepad and Wordpad.
+
+# Command and Control
+- **Cobalt Strike:**
+  - Initial traffic proxied via CloudFlare, later switched to AWS IP.
+  - Domains: `svchorst[.]com`, `*regsvcast[.]com`.
+- **SystemBC:**
+  - Used as a proxy tool, manual execution observed.
+
+
+# Exfiltration
+- **Unknown if exfiltration occurred**.
+
+# Impact
+- **Ransomware Deployment:**
+  - BlackSuit ransomware (`qwe.exe`) executed, encrypting hosts and leaving ransom notes.
